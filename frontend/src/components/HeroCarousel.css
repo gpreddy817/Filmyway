@@ -1,0 +1,304 @@
+/* ══════════════════════════════════════════════════════
+   Hero Carousel — Jio Hotstar inspired
+   ══════════════════════════════════════════════════════ */
+
+.hero-carousel {
+    position: relative;
+    width: 100%;
+    height: 82vh;
+    min-height: 520px;
+    max-height: 820px;
+    overflow: hidden;
+    background: #000;
+    /* sits directly under the fixed navbar */
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+/* ── Full-bleed background image ───────────────────── */
+.carousel-bg-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    transition: opacity 0.7s ease;
+}
+
+
+
+
+/* ── Dark gradient overlay ───────────────────────────── */
+.carousel-bg-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+        /* left-side readability */
+        linear-gradient(to right, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.55) 30%, rgba(0, 0, 0, 0.1) 60%, rgba(0, 0, 0, 0) 100%),
+        /* bottom fade into page */
+        linear-gradient(to top, rgba(10, 10, 15, 1) 0%, rgba(10, 10, 15, 0.25) 20%, transparent 40%);
+    z-index: 1;
+}
+
+/* ── Content (title / buttons) ──────────────────────── */
+.carousel-content {
+    position: absolute;
+    bottom: 14%;
+    left: 6%;
+    z-index: 3;
+    max-width: 520px;
+    animation: slide-up 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(34px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.carousel-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.carousel-year {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.65rem;
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.carousel-rating {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.12);
+    padding: 0.2rem 0.65rem;
+    border-radius: 99px;
+    border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.carousel-movie-title {
+    font-size: clamp(2.4rem, 5vw, 4.4rem);
+    font-weight: 900;
+    line-height: 1.08;
+    color: #fff;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    margin-bottom: 1.75rem;
+    letter-spacing: -1px;
+}
+
+/* ── "Know More" CTA button ─────────────────────────── */
+.carousel-know-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.85rem 2rem;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1.5px solid rgba(255, 255, 255, 0.28);
+    border-radius: 50px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-decoration: none;
+    transition: all 0.28s ease;
+}
+
+.carousel-know-more:hover {
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.55);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    color: #fff;
+}
+
+/* ── Thumbnail strip (right side) ───────────────────── */
+.carousel-thumbs {
+    position: absolute;
+    right: 3.5%;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.carousel-thumb {
+    width: 56px;
+    height: 84px;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    opacity: 0.55;
+    transition: all 0.28s ease;
+    padding: 0;
+}
+
+.carousel-thumb.active,
+.carousel-thumb:hover {
+    opacity: 1;
+    border-color: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Arrow controls ─────────────────────────────────── */
+.carousel-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 4;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.75);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    opacity: 0;
+}
+
+.hero-carousel:hover .carousel-arrow {
+    opacity: 1;
+}
+
+.carousel-arrow:hover {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    transform: translateY(-50%) scale(1.12);
+}
+
+.carousel-arrow.prev {
+    left: 1.5rem;
+}
+
+.carousel-arrow.next {
+    right: 6rem;
+}
+
+/* ── Dot indicators ─────────────────────────────────── */
+.carousel-dots {
+    position: absolute;
+    bottom: 2rem;
+    left: 6%;
+    z-index: 3;
+    display: flex;
+    gap: 0.55rem;
+    align-items: center;
+}
+
+.carousel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.35s ease;
+}
+
+.carousel-dot.active {
+    background: #fff;
+    width: 26px;
+    border-radius: 10px;
+}
+
+/* ── Skeleton ────────────────────────────────────────── */
+.skeleton-carousel {
+    background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 100%);
+}
+
+.skeleton-carousel-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            rgba(255, 255, 255, 0.04),
+            rgba(255, 255, 255, 0.09),
+            rgba(255, 255, 255, 0.04));
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s infinite ease-in-out;
+}
+
+.skeleton-carousel-content {
+    position: absolute;
+    bottom: 14%;
+    left: 6%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.skeleton-carousel-title {
+    width: 380px;
+    height: 56px;
+    border-radius: 10px;
+}
+
+.skeleton-carousel-subtitle {
+    width: 240px;
+    height: 22px;
+    border-radius: 8px;
+}
+
+.skeleton-carousel-btn {
+    width: 150px;
+    height: 46px;
+    border-radius: 50px;
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+    .carousel-thumbs {
+        display: none;
+    }
+
+    .carousel-know-more {
+        padding: 0.75rem 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .carousel-arrow.next {
+        right: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-carousel {
+        height: 70vh;
+        min-height: 400px;
+    }
+
+    .carousel-content {
+        left: 5%;
+        max-width: 90%;
+    }
+
+    .carousel-movie-title {
+        font-size: 2rem;
+    }
+}
