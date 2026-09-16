@@ -1,8 +1,4 @@
 # 🎬 Filmyway - Modern Movie Discovery Platform
-
-![Filmyway Banner
-*Note: This is a placeholder banner. For the best experience, replace with your custom branding.*
-
 Filmyway is a premium movie discovery and streaming-like platform built with the MERN stack. It features a sleek glassmorphism design, real-time data from TMDB & OMDB, and a robust admin dashboard for managing custom content.
 
 ---
