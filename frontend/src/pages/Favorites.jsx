@@ -29,10 +29,20 @@ const Favorites = () => {
                 const config = { headers: { Authorization: `Bearer ${user.token}` } };
 
                 const favRes = await axios.get(`${API_URL}/users/favorites`, config);
-                setFavorites(favRes.data);
+                const sortedFavs = (favRes.data || []).sort((a, b) => {
+                    const yearA = a.releaseYear || (a.release_date ? new Date(a.release_date).getFullYear() : 0) || 0;
+                    const yearB = b.releaseYear || (b.release_date ? new Date(b.release_date).getFullYear() : 0) || 0;
+                    return yearB - yearA;
+                });
+                setFavorites(sortedFavs);
 
                 const histRes = await axios.get(`${API_URL}/users/history`, config);
-                setHistory(histRes.data);
+                const sortedHist = (histRes.data || []).sort((a, b) => {
+                    const yearA = a.releaseYear || (a.release_date ? new Date(a.release_date).getFullYear() : 0) || 0;
+                    const yearB = b.releaseYear || (b.release_date ? new Date(b.release_date).getFullYear() : 0) || 0;
+                    return yearB - yearA;
+                });
+                setHistory(sortedHist);
 
             } catch (error) {
                 console.error("Failed to load user data", error);

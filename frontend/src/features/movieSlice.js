@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { omdbApi, OMDB_API_KEY } from '../api/omdb';
+import { tmdbApi, mapTmdbResults } from '../api/tmdb';
 
 const initialState = {
     latest: [],
@@ -11,83 +11,58 @@ const initialState = {
     error: null,
 };
 
-const mapOmdbSearchResults = (data) => {
-    if (!data || data.Response === 'False' || !Array.isArray(data.Search)) return [];
-    return data.Search.map(item => ({
-        id: item.imdbID,
-        title: item.Title,
-        name: item.Title,
-        posterUrl: item.Poster !== 'N/A' ? item.Poster : null,
-        release_date: item.Year ? `${item.Year}-01-01` : null,
-        first_air_date: null,
-        vote_average: Number(item.imdbRating) || null,
-        mediaType: item.Type,
-    }));
-};
-
 export const fetchLatest = createAsyncThunk('movies/fetchLatest', async () => {
-    // To get the latest movies from OMDb, we search common words restricted to the current year
-    const currentYear = new Date().getFullYear();
-    const searches = ['man', 'the', 'world', 'day', 'time'];
-    const results = [];
-    for (const term of searches) {
-        try {
-            const res = await omdbApi.get('', {
-                params: { apikey: OMDB_API_KEY, s: term, y: currentYear, type: 'movie', page: 1 },
-            });
-            const mapped = mapOmdbSearchResults(res.data);
-            results.push(...mapped.filter(m => m.posterUrl && m.posterUrl !== 'N/A'));
-        } catch (e) { /* skip on error */ }
+    try {
+        const response = await tmdbApi.get('/movie/now_playing', { params: { page: 1 } });
+        return mapTmdbResults(response.data?.results || []);
+    } catch (error) {
+        console.error('Error fetching latest movies from TMDB:', error);
+        throw error;
     }
-    const seen = new Set();
-    return results
-        .filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; })
-        .slice(0, 8);
 });
+
 export const fetchTrending = createAsyncThunk('movies/fetchTrending', async () => {
-    const response = await omdbApi.get('', {
-        params: {
-            apikey: OMDB_API_KEY,
-            s: 'avengers',
-            page: 1,
-        },
-    });
-    return mapOmdbSearchResults(response.data);
+    try {
+        const response = await tmdbApi.get('/trending/movie/day');
+        return mapTmdbResults(response.data?.results || []);
+    } catch (error) {
+        console.error('Error fetching trending movies from TMDB:', error);
+        throw error;
+    }
 });
 
 export const fetchPopular = createAsyncThunk('movies/fetchPopular', async (page = 1) => {
-    const response = await omdbApi.get('', {
-        params: {
-            apikey: OMDB_API_KEY,
-            s: 'star',
-            page,
-        },
-    });
-    return mapOmdbSearchResults(response.data);
+    try {
+        const response = await tmdbApi.get('/movie/popular', { params: { page } });
+        return mapTmdbResults(response.data?.results || []);
+    } catch (error) {
+        console.error('Error fetching popular movies from TMDB:', error);
+        throw error;
+    }
 });
 
 export const fetchTvShows = createAsyncThunk('movies/fetchTvShows', async (page = 1) => {
-    const response = await omdbApi.get('', {
-        params: {
-            apikey: OMDB_API_KEY,
-            s: 'friends',
-            type: 'series',
-            page,
-        },
-    });
-    return mapOmdbSearchResults(response.data);
+    try {
+        const response = await tmdbApi.get('/tv/popular', { params: { page } });
+        return mapTmdbResults(response.data?.results || []);
+    } catch (error) {
+        console.error('Error fetching TV shows from TMDB:', error);
+        throw error;
+    }
 });
 
 export const searchMovies = createAsyncThunk('movies/searchMovies', async ({ query, page = 1 }) => {
-    if (!query) return [];
-    const response = await omdbApi.get('', {
-        params: {
-            apikey: OMDB_API_KEY,
-            s: query,
-            page,
-        },
-    });
-    return mapOmdbSearchResults(response.data);
+    if (!query || !query.trim()) return [];
+    try {
+        const response = await tmdbApi.get('/search/multi', {
+            params: { query: query.trim(), page, include_adult: false },
+        });
+        const items = (response.data?.results || []).filter(item => item.media_type !== 'person');
+        return mapTmdbResults(items);
+    } catch (error) {
+        console.error('Error searching media on TMDB:', error);
+        throw error;
+    }
 });
 
 export const movieSlice = createSlice({
@@ -111,7 +86,7 @@ export const movieSlice = createSlice({
             })
             .addCase(fetchLatest.rejected, (state, action) => {
                 state.status = 'failed';
-                state.error = action.error.message;
+                state.error = action.error?.message || 'Failed to fetch latest movies';
             })
             // Trending
             .addCase(fetchTrending.pending, (state) => {
@@ -124,9 +99,9 @@ export const movieSlice = createSlice({
             })
             .addCase(fetchTrending.rejected, (state, action) => {
                 state.status = 'failed';
-                state.error = action.error.message;
+                state.error = action.error?.message || 'Failed to fetch trending movies';
             })
-            // Popular movies (supports infinite scroll)
+            // Popular movies
             .addCase(fetchPopular.pending, (state) => {
                 state.status = 'loading';
                 state.error = null;
@@ -134,15 +109,17 @@ export const movieSlice = createSlice({
             .addCase(fetchPopular.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 const page = action.meta.arg || 1;
-                if (page > 1) {
-                    state.popular = [...state.popular, ...action.payload];
-                } else {
-                    state.popular = action.payload;
-                }
+                const newItems = page > 1 ? [...state.popular, ...action.payload] : action.payload;
+                const seen = new Set();
+                state.popular = newItems.filter(m => {
+                    if (seen.has(m.id)) return false;
+                    seen.add(m.id);
+                    return true;
+                });
             })
             .addCase(fetchPopular.rejected, (state, action) => {
                 state.status = 'failed';
-                state.error = action.error.message;
+                state.error = action.error?.message || 'Failed to fetch popular movies';
             })
             // TV shows
             .addCase(fetchTvShows.pending, (state) => {
@@ -151,11 +128,18 @@ export const movieSlice = createSlice({
             })
             .addCase(fetchTvShows.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.tvShows = action.payload;
+                const page = action.meta.arg || 1;
+                const newItems = page > 1 ? [...state.tvShows, ...action.payload] : action.payload;
+                const seen = new Set();
+                state.tvShows = newItems.filter(m => {
+                    if (seen.has(m.id)) return false;
+                    seen.add(m.id);
+                    return true;
+                });
             })
             .addCase(fetchTvShows.rejected, (state, action) => {
                 state.status = 'failed';
-                state.error = action.error.message;
+                state.error = action.error?.message || 'Failed to fetch TV shows';
             })
             // Search
             .addCase(searchMovies.pending, (state) => {
@@ -165,15 +149,17 @@ export const movieSlice = createSlice({
             .addCase(searchMovies.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 const { page = 1 } = action.meta.arg || {};
-                if (page > 1) {
-                    state.searchResults = [...state.searchResults, ...action.payload];
-                } else {
-                    state.searchResults = action.payload;
-                }
+                const newItems = page > 1 ? [...state.searchResults, ...action.payload] : action.payload;
+                const seen = new Set();
+                state.searchResults = newItems.filter(m => {
+                    if (seen.has(m.id)) return false;
+                    seen.add(m.id);
+                    return true;
+                });
             })
             .addCase(searchMovies.rejected, (state, action) => {
                 state.status = 'failed';
-                state.error = action.error.message;
+                state.error = action.error?.message || 'Failed to search movies';
             });
     },
 });

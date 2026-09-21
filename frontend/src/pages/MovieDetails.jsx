@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { tmdbApi, getTmdbPosterUrl, getTmdbBackdropUrl } from '../api/tmdb';
 import { omdbApi, OMDB_API_KEY } from '../api/omdb';
 import axios from 'axios';
 import { Heart, Play, X } from 'lucide-react';
@@ -8,7 +9,6 @@ import './MovieDetails.css';
 
 /* ─── helpers ─────────────────────────────────────────────────────── */
 
-/** Extract a YouTube video-ID from any YouTube/youtu.be URL */
 const extractYouTubeId = (url) => {
     try {
         const parsed = new URL(url);
@@ -24,10 +24,6 @@ const extractYouTubeId = (url) => {
     }
 };
 
-/**
- * Build a YouTube search-embed src that shows the best matching trailer
- * using YouTube's native listType=search parameter — NO API key required.
- */
 const buildYouTubeSearchSrc = (title, year) => {
     const query = encodeURIComponent(`${title} ${year || ''} official trailer`);
     return `https://www.youtube-nocookie.com/embed?listType=search&list=${query}&autoplay=1&rel=0&modestbranding=1`;
@@ -42,7 +38,6 @@ const MovieDetails = () => {
     const [isFavorite, setIsFavorite] = useState(false);
     const [authError, setAuthError] = useState('');
     const [showTrailer, setShowTrailer] = useState(false);
-    /** trailerSrc: the full iframe src string, or '' for no-trailer fallback */
     const [trailerSrc, setTrailerSrc] = useState(null);
 
     const { user } = useSelector((state) => state.auth);
@@ -54,37 +49,122 @@ const MovieDetails = () => {
             try {
                 setLoading(true);
                 const isCustomMovieId = /^[0-9a-fA-F]{24}$/.test(id);
-
-                let loadedMovie;
+                let loadedMovie = null;
 
                 if (isCustomMovieId) {
                     const res = await axios.get(`${API_URL}/movies/${id}`);
                     loadedMovie = { ...res.data, isCustom: true };
                 } else {
-                    const detailRes = await omdbApi.get('', {
-                        params: { apikey: OMDB_API_KEY, i: id, plot: 'full' },
-                    });
-                    loadedMovie = { ...detailRes.data, isCustom: false };
+                    let tmdbId = id;
+                    let isTv = false;
+
+                    // If IMDb ID (starts with tt), find TMDB ID
+                    if (typeof id === 'string' && id.startsWith('tt')) {
+                        try {
+                            const findRes = await tmdbApi.get(`/find/${id}`, {
+                                params: { external_source: 'imdb_id' }
+                            });
+                            if (findRes.data.movie_results?.length > 0) {
+                                tmdbId = findRes.data.movie_results[0].id;
+                                isTv = false;
+                            } else if (findRes.data.tv_results?.length > 0) {
+                                tmdbId = findRes.data.tv_results[0].id;
+                                isTv = true;
+                            }
+                        } catch (e) {
+                            console.warn('TMDB find by IMDb ID failed, falling back to direct query', e);
+                        }
+                    }
+
+                    // Fetch from TMDB
+                    try {
+                        const endpoint = isTv ? `/tv/${tmdbId}` : `/movie/${tmdbId}`;
+                        const detailRes = await tmdbApi.get(endpoint, {
+                            params: { append_to_response: 'videos,credits' }
+                        });
+                        const data = detailRes.data;
+
+                        const title = data.title || data.name || data.original_title || data.original_name;
+                        const releaseDate = data.release_date || data.first_air_date || '';
+                        const year = releaseDate ? releaseDate.substring(0, 4) : '';
+                        const posterUrl = getTmdbPosterUrl(data.poster_path);
+                        const backdropUrl = getTmdbBackdropUrl(data.backdrop_path);
+                        const genres = data.genres ? data.genres.map(g => g.name).join(', ') : '';
+                        const runtime = data.runtime ? `${data.runtime} min` : (data.episode_run_time?.[0] ? `${data.episode_run_time[0]} min` : '');
+
+                        // Cast & Director
+                        const director = data.credits?.crew?.find(c => c.job === 'Director')?.name || data.created_by?.map(c => c.name).join(', ') || '';
+                        const cast = data.credits?.cast?.slice(0, 6).map(c => c.name).join(', ') || '';
+
+                        // Trailer video from TMDB
+                        const videos = data.videos?.results || [];
+                        const officialTrailer = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer')
+                            || videos.find(v => v.site === 'YouTube' && v.type === 'Teaser')
+                            || videos.find(v => v.site === 'YouTube');
+                        const youtubeKey = officialTrailer?.key || null;
+
+                        loadedMovie = {
+                            isCustom: false,
+                            id: String(data.id),
+                            tmdbId: String(data.id),
+                            imdbID: data.imdb_id || id,
+                            title,
+                            Title: title,
+                            year,
+                            Year: year,
+                            releaseDate,
+                            posterUrl,
+                            Poster: posterUrl,
+                            backdropUrl,
+                            rating: data.vote_average ? data.vote_average.toFixed(1) : 'NR',
+                            imdbRating: data.vote_average ? data.vote_average.toFixed(1) : 'NR',
+                            overview: data.overview || 'Description not available',
+                            Plot: data.overview || 'Description not available',
+                            genres,
+                            Genre: genres,
+                            runtime,
+                            Runtime: runtime,
+                            director,
+                            Director: director,
+                            cast,
+                            Actors: cast,
+                            youtubeKey,
+                            mediaType: isTv ? 'tv' : 'movie'
+                        };
+                    } catch (tmdbErr) {
+                        console.warn('TMDB fetch failed, attempting OMDB fallback', tmdbErr);
+                        // Fallback to OMDB
+                        try {
+                            const omdbRes = await omdbApi.get('', {
+                                params: { apikey: OMDB_API_KEY, i: id, plot: 'full' }
+                            });
+                            if (omdbRes.data && omdbRes.data.Response !== 'False') {
+                                loadedMovie = { ...omdbRes.data, isCustom: false, tmdbId: omdbRes.data.imdbID };
+                            }
+                        } catch (omdbErr) {
+                            console.error('OMDB fallback failed:', omdbErr);
+                        }
+                    }
                 }
 
                 setMovie(loadedMovie);
 
-                // Add to history
+                // Add to history and check favorites
                 if (user && loadedMovie) {
                     const config = { headers: { Authorization: `Bearer ${user.token}` } };
-                    const historyId = loadedMovie.isCustom ? loadedMovie._id : loadedMovie.imdbID;
+                    const historyId = loadedMovie.isCustom ? loadedMovie._id : (loadedMovie.tmdbId || loadedMovie.imdbID || id);
                     const historyData = {
-                        tmdbId: historyId,
-                        title: loadedMovie.isCustom ? loadedMovie.title : loadedMovie.Title,
+                        tmdbId: String(historyId),
+                        title: loadedMovie.isCustom ? loadedMovie.title : (loadedMovie.title || loadedMovie.Title),
                         posterUrl: loadedMovie.isCustom
                             ? loadedMovie.posterUrl
-                            : (loadedMovie.Poster && loadedMovie.Poster !== 'N/A' ? loadedMovie.Poster : ''),
-                        mediaType: loadedMovie.isCustom ? loadedMovie.category : loadedMovie.Type,
+                            : (loadedMovie.posterUrl || loadedMovie.Poster || ''),
+                        mediaType: loadedMovie.isCustom ? loadedMovie.category : (loadedMovie.mediaType || 'movie'),
                     };
                     axios.post(`${API_URL}/users/history`, historyData, config).catch(console.error);
 
                     const favRes = await axios.get(`${API_URL}/users/favorites`, config);
-                    const isFav = favRes.data.some(f => f.tmdbId === historyId);
+                    const isFav = favRes.data.some(f => String(f.tmdbId) === String(historyId));
                     setIsFavorite(isFav);
                 }
             } catch (error) {
@@ -109,20 +189,19 @@ const MovieDetails = () => {
     const handlePlayTrailer = () => {
         if (!movie) return;
 
-        // Build src only once
         if (trailerSrc === null) {
             if (movie.isCustom && movie.trailerUrl) {
-                // Admin-uploaded movie — use saved YouTube link
                 const videoId = extractYouTubeId(movie.trailerUrl);
                 setTrailerSrc(
                     videoId
                         ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`
                         : buildYouTubeSearchSrc(movie.title, movie.releaseDate?.substring(0, 4))
                 );
+            } else if (movie.youtubeKey) {
+                setTrailerSrc(`https://www.youtube-nocookie.com/embed/${movie.youtubeKey}?autoplay=1&rel=0&modestbranding=1`);
             } else {
-                // OMDb movie — search YouTube by title + year (no API key needed)
-                const title = movie.Title || '';
-                const year  = movie.Year  || '';
+                const title = movie.title || movie.Title || '';
+                const year = movie.year || movie.Year || '';
                 setTrailerSrc(buildYouTubeSearchSrc(title, year));
             }
         }
@@ -142,7 +221,7 @@ const MovieDetails = () => {
         setAuthError('');
         const config = { headers: { Authorization: `Bearer ${user.token}` } };
         const isCustom = movie.isCustom;
-        const favId    = isCustom ? movie._id : movie.imdbID;
+        const favId = String(isCustom ? movie._id : (movie.tmdbId || movie.imdbID || id));
 
         try {
             if (isFavorite) {
@@ -151,11 +230,11 @@ const MovieDetails = () => {
             } else {
                 const favData = {
                     tmdbId: favId,
-                    title: isCustom ? movie.title : movie.Title,
+                    title: isCustom ? movie.title : (movie.title || movie.Title),
                     posterUrl: isCustom
                         ? movie.posterUrl
-                        : (movie.Poster && movie.Poster !== 'N/A' ? movie.Poster : ''),
-                    mediaType: isCustom ? movie.category : movie.Type,
+                        : (movie.posterUrl || movie.Poster || ''),
+                    mediaType: isCustom ? movie.category : (movie.mediaType || 'movie'),
                 };
                 await axios.post(`${API_URL}/users/favorites`, favData, config);
                 setIsFavorite(true);
@@ -202,18 +281,17 @@ const MovieDetails = () => {
         );
     }
 
-    if (!movie || (!movie.isCustom && movie.Response === 'False')) {
-        return <div className="error-message">Movie not found</div>;
+    if (!movie) {
+        return <div className="error-message">Movie or TV Show not found</div>;
     }
 
-    const posterSrc = movie.isCustom
-        ? (movie.posterUrl || '/no-poster.png')
-        : (movie.Poster && movie.Poster !== 'N/A' ? movie.Poster : '/no-poster.png');
-
-    const title = movie.isCustom ? movie.title : movie.Title;
-    const year  = movie.isCustom
-        ? (movie.releaseDate ? movie.releaseDate.substring(0, 4) : '')
-        : movie.Year;
+    const posterSrc = movie.posterUrl || movie.Poster || '/no-poster.png';
+    const backdropSrc = movie.backdropUrl || posterSrc;
+    const title = movie.title || movie.Title || 'Untitled';
+    const year = movie.year || movie.Year || '';
+    const rating = movie.rating || movie.imdbRating || 'NR';
+    const genres = movie.genres || movie.Genre || '';
+    const overview = movie.overview || movie.Plot || 'Description not available';
 
     /* ── render ────────────────────────────────────────────────────── */
     return (
@@ -225,7 +303,7 @@ const MovieDetails = () => {
                 {/* ── Backdrop ──────────────────────────────────── */}
                 <div
                     className="backdrop-banner"
-                    style={{ backgroundImage: `url(${posterSrc})` }}
+                    style={{ backgroundImage: `url(${backdropSrc})` }}
                 >
                     <div className="backdrop-overlay" />
                 </div>
@@ -244,46 +322,39 @@ const MovieDetails = () => {
                         <h1 className="detail-title">{title}</h1>
 
                         <div className="meta-info">
-                            {movie.Rated && movie.Rated !== 'N/A' && (
-                                <span className="content-rating">{movie.Rated}</span>
-                            )}
                             <span className="rating-badge">
-                                ★ {movie.isCustom ? 'NR' : (movie.imdbRating || 'NR')}
+                                ★ {rating}
                             </span>
-                            <span className="date">{year}</span>
-                            {!movie.isCustom && movie.Runtime && movie.Runtime !== 'N/A' && (
-                                <span className="runtime">{movie.Runtime}</span>
+                            {year && <span className="date">{year}</span>}
+                            {movie.runtime && (
+                                <span className="runtime">{movie.runtime}</span>
                             )}
                         </div>
 
-                        <div className="genres">
-                            {(movie.isCustom ? movie.genre : movie.Genre)
-                                ?.split(',')
-                                .map(g => (
+                        {genres && (
+                            <div className="genres">
+                                {genres.split(',').map(g => (
                                     <span key={g.trim()} className="genre-badge">{g.trim()}</span>
                                 ))}
-                        </div>
-
-                        <div className="overview-section">
-                            <h3>Overview</h3>
-                            <p className="overview-text">
-                                {movie.isCustom
-                                    ? (movie.description || 'Description not available')
-                                    : (movie.Plot || 'Description not available')}
-                            </p>
-                        </div>
-
-                        {!movie.isCustom && movie.Director && movie.Director !== 'N/A' && (
-                            <div className="overview-section">
-                                <h3>Director</h3>
-                                <p className="overview-text">{movie.Director}</p>
                             </div>
                         )}
 
-                        {!movie.isCustom && movie.Actors && movie.Actors !== 'N/A' && (
+                        <div className="overview-section">
+                            <h3>Overview</h3>
+                            <p className="overview-text">{overview}</p>
+                        </div>
+
+                        {movie.director && (
+                            <div className="overview-section">
+                                <h3>Director / Creator</h3>
+                                <p className="overview-text">{movie.director}</p>
+                            </div>
+                        )}
+
+                        {movie.cast && (
                             <div className="overview-section">
                                 <h3>Cast</h3>
-                                <p className="overview-text">{movie.Actors}</p>
+                                <p className="overview-text">{movie.cast}</p>
                             </div>
                         )}
 

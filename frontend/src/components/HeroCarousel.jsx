@@ -47,16 +47,16 @@ const HeroCarousel = ({ movies }) => {
     }
 
     const movie = carouselMovies[currentIndex];
-    const rawImg = movie.posterUrl || movie.Poster;
+    const rawImg = movie.backdropUrl || movie.posterUrl || movie.Poster;
     const bgImage = getHiRes(rawImg) || rawImg;  // full-res background
-    const thumbImg = rawImg;                         // smaller is fine for thumbs
+    const thumbImg = movie.posterUrl || movie.Poster; // smaller is fine for thumbs
     const title = movie.title || movie.name || movie.Title || 'Unknown';
     const year = movie.release_date
         ? new Date(movie.release_date).getFullYear()
         : (movie.Year || '');
-    const id = movie.id || movie.imdbID || movie._id;
+    const id = movie.id || movie.tmdbId || movie.imdbID || movie._id;
     const rating = movie.vote_average
-        ? movie.vote_average.toFixed(1)
+        ? (typeof movie.vote_average === 'number' ? movie.vote_average.toFixed(1) : movie.vote_average)
         : movie.imdbRating || null;
 
     return (

@@ -42,7 +42,12 @@ const Home = () => {
         const loadCustomMovies = async () => {
             try {
                 const res = await axios.get(`${API_URL}/movies`);
-                setCustomMovies(res.data || []);
+                const sorted = (res.data || []).sort((a, b) => {
+                    const yearA = a.releaseDate ? new Date(a.releaseDate).getFullYear() : 0;
+                    const yearB = b.releaseDate ? new Date(b.releaseDate).getFullYear() : 0;
+                    return yearB - yearA;
+                });
+                setCustomMovies(sorted);
             } catch (error) {
                 console.error('Failed to load custom movies', error);
             }
