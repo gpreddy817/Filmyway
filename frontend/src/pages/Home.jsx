@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
-import { fetchLatest, fetchTrending, fetchPopular, fetchTvShows, searchMovies, clearSearch } from '../features/movieSlice';
+import { fetchLatest, fetchTrending, fetchPopular, fetchTvShows, searchMovies, fetchByGenre, clearSearch, clearGenre } from '../features/movieSlice';
 import MovieCard from '../components/MovieCard';
 import VirtualizedMovieGrid from '../components/VirtualizedMovieGrid';
 import HeroCarousel from '../components/HeroCarousel';
@@ -14,10 +14,13 @@ const useQuery = () => {
 
 const Home = () => {
     const dispatch = useDispatch();
-    const query = useQuery().get('search');
-    const category = useQuery().get('category') || 'home';
+    const queryLocation = useQuery();
+    const query = queryLocation.get('search');
+    const category = queryLocation.get('category') || 'home';
+    const genre = queryLocation.get('genre');
+    const genreId = queryLocation.get('genreId');
 
-    const { latest, trending, popular, tvShows, searchResults, status } = useSelector((state) => state.movies);
+    const { latest, trending, popular, tvShows, searchResults, genreResults, status } = useSelector((state) => state.movies);
     const [page, setPage] = useState(1);
     const [showNoResults, setShowNoResults] = useState(false);
     const [customMovies, setCustomMovies] = useState([]);
@@ -28,14 +31,18 @@ const Home = () => {
         if (query) {
             dispatch(searchMovies({ query, page: 1 }));
             setPage(1);
+        } else if (genreId) {
+            dispatch(fetchByGenre({ genreId, page: 1 }));
+            setPage(1);
         } else {
             dispatch(clearSearch());
+            dispatch(clearGenre());
             if (latest.length === 0 && (category === 'home' || category === 'movies')) dispatch(fetchLatest());
             if (trending.length === 0 && (category === 'home' || category === 'trending')) dispatch(fetchTrending());
             if (popular.length === 0 || page === 1 && (category === 'home' || category === 'movies')) dispatch(fetchPopular(1));
             if (tvShows.length === 0 && (category === 'home' || category === 'tvshows')) dispatch(fetchTvShows(1));
         }
-    }, [query, category, dispatch]);
+    }, [query, genreId, category, dispatch]);
 
     // Load custom admin movies once for home sections
     useEffect(() => {
@@ -53,34 +60,37 @@ const Home = () => {
             }
         };
 
-        if (!query && customMovies.length === 0) {
+        if (!query && !genreId && customMovies.length === 0) {
             loadCustomMovies();
         }
-    }, [API_URL, query, customMovies.length]);
+    }, [API_URL, query, genreId, customMovies.length]);
 
     // Delay "no results" message so skeleton shows briefly
     useEffect(() => {
-        if (!query) {
+        if (!query && !genreId) {
             setShowNoResults(false);
             return;
         }
 
-        if (status === 'succeeded' && searchResults.length === 0) {
+        const itemsLength = query ? searchResults.length : genreResults.length;
+
+        if (status === 'succeeded' && itemsLength === 0) {
             const timer = setTimeout(() => setShowNoResults(true), 2000);
             return () => clearTimeout(timer);
         }
 
-        // If we got results or are still loading, hide the message
         setShowNoResults(false);
-    }, [query, status, searchResults.length]);
+    }, [query, genreId, status, searchResults.length, genreResults.length]);
 
     useEffect(() => {
-        if (page > 1 && !query) {
+        if (page > 1 && !query && !genreId) {
             dispatch(fetchPopular(page));
         } else if (page > 1 && query) {
             dispatch(searchMovies({ query, page }));
+        } else if (page > 1 && genreId) {
+            dispatch(fetchByGenre({ genreId, page }));
         }
-    }, [page, query, category, dispatch]);
+    }, [page, query, genreId, category, dispatch]);
 
     const lastElementRef = useCallback(node => {
         if (status === 'loading') return;
@@ -93,7 +103,7 @@ const Home = () => {
         if (node) observer.current.observe(node);
     }, [status]);
 
-    if (!query && status === 'loading' && page === 1) {
+    if (!query && !genreId && status === 'loading' && page === 1) {
         // Skeleton screen for initial home load
         const skeletonItems = Array.from({ length: 6 });
 
@@ -168,6 +178,44 @@ const Home = () => {
                             />
                             {searchResults.length === 0 && showNoResults && (
                                 <p className="no-results">No movies or shows found.</p>
+                            )}
+                        </>
+                    )}
+                </section>
+            ) : genreId ? (
+                <section className="movie-section">
+                    <h2 className="section-title">{genre ? `${genre} Movies` : 'Genre Movies'}</h2>
+
+                    {(status === 'loading' && page === 1) ? (
+                        <div className="movie-grid">
+                            {Array.from({ length: 8 }).map((_, index) => (
+                                <div key={index} className="skeleton-card">
+                                    <div className="skeleton skeleton-poster" />
+                                    <div className="skeleton skeleton-text" />
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <>
+                            <VirtualizedMovieGrid
+                                items={genreResults}
+                                estimatedItemHeight={320}
+                                renderCard={(movie, index) => {
+                                    const isLast = index === genreResults.length - 1;
+                                    const card = <MovieCard movie={movie} />;
+                                    return isLast ? (
+                                        <div ref={lastElementRef} key={movie.id || movie.imdbID || index}>
+                                            {card}
+                                        </div>
+                                    ) : (
+                                        <React.Fragment key={movie.id || movie.imdbID || index}>
+                                            {card}
+                                        </React.Fragment>
+                                    );
+                                }}
+                            />
+                            {genreResults.length === 0 && showNoResults && (
+                                <p className="no-results">No movies found for this genre.</p>
                             )}
                         </>
                     )}

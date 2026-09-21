@@ -1,6 +1,7 @@
 # 🎬 Filmyway - Modern Movie Discovery Platform
 Filmyway is a premium movie discovery and streaming-like platform built with the MERN stack. It features a sleek glassmorphism design, real-time data from TMDB & OMDB, and a robust admin dashboard for managing custom content.
-
+Live Preview:
+https://filmyway.vercel.app/
 ---
 
 ## 🚀 Key Features
@@ -117,4 +118,4 @@ This project is licensed under the ISC License.
 
 ---
 
-Developed with ❤️ by [Girish](https://github.com/yourgithubprofile)
+Developed with ❤️ by [Girish](https://github.com/gpreddy817)

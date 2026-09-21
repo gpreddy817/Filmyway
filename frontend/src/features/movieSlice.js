@@ -7,6 +7,7 @@ const initialState = {
     popular: [],
     tvShows: [],
     searchResults: [],
+    genreResults: [],
     status: 'idle', // idle | loading | succeeded | failed
     error: null,
 };
@@ -51,6 +52,19 @@ export const fetchTvShows = createAsyncThunk('movies/fetchTvShows', async (page 
     }
 });
 
+export const fetchByGenre = createAsyncThunk('movies/fetchByGenre', async ({ genreId, page = 1 }) => {
+    if (!genreId) return [];
+    try {
+        const response = await tmdbApi.get('/discover/movie', {
+            params: { with_genres: genreId, page, sort_by: 'popularity.desc' },
+        });
+        return mapTmdbResults(response.data?.results || []);
+    } catch (error) {
+        console.error('Error fetching movies by genre from TMDB:', error);
+        throw error;
+    }
+});
+
 export const searchMovies = createAsyncThunk('movies/searchMovies', async ({ query, page = 1 }) => {
     if (!query || !query.trim()) return [];
     try {
@@ -71,6 +85,9 @@ export const movieSlice = createSlice({
     reducers: {
         clearSearch: (state) => {
             state.searchResults = [];
+        },
+        clearGenre: (state) => {
+            state.genreResults = [];
         }
     },
     extraReducers: (builder) => {
@@ -141,6 +158,26 @@ export const movieSlice = createSlice({
                 state.status = 'failed';
                 state.error = action.error?.message || 'Failed to fetch TV shows';
             })
+            // Fetch by genre
+            .addCase(fetchByGenre.pending, (state) => {
+                state.status = 'loading';
+                state.error = null;
+            })
+            .addCase(fetchByGenre.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                const { page = 1 } = action.meta.arg || {};
+                const newItems = page > 1 ? [...state.genreResults, ...action.payload] : action.payload;
+                const seen = new Set();
+                state.genreResults = newItems.filter(m => {
+                    if (seen.has(m.id)) return false;
+                    seen.add(m.id);
+                    return true;
+                });
+            })
+            .addCase(fetchByGenre.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.error?.message || 'Failed to fetch movies by genre';
+            })
             // Search
             .addCase(searchMovies.pending, (state) => {
                 state.status = 'loading';
@@ -164,5 +201,5 @@ export const movieSlice = createSlice({
     },
 });
 
-export const { clearSearch } = movieSlice.actions;
+export const { clearSearch, clearGenre } = movieSlice.actions;
 export default movieSlice.reducer;

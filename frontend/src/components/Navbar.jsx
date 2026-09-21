@@ -3,23 +3,28 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { requestLogout, reset } from '../features/authSlice';
 import { searchMovies, clearSearch } from '../features/movieSlice';
-import { Search, Popcorn, User as UserIcon, LogOut } from 'lucide-react';
+import { Search, Filter, LogOut, Menu, X } from 'lucide-react';
+import { GENRES } from '../utils/genres';
 import './Navbar.css';
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
     const searchWrapperRef = useRef(null);
+    const navRef = useRef(null);
+
     const { user } = useSelector((state) => state.auth);
-    const { searchResults, status: movieStatus } = useSelector((state) => state.movies);
+    const { searchResults } = useSelector((state) => state.movies);
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Determine active category for highlighting
     const searchParams = new URLSearchParams(location.search);
     const category = location.pathname === '/' ? (searchParams.get('category') || 'home') : null;
+    const currentGenreId = searchParams.get('genreId') || '';
 
     useEffect(() => {
         const handleScroll = () => {
@@ -33,11 +38,18 @@ const Navbar = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Close suggestions on outside click or scroll
+    // Close menu on location change
+    useEffect(() => {
+        setIsMenuOpen(false);
+    }, [location]);
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (searchWrapperRef.current && !searchWrapperRef.current.contains(event.target)) {
                 setShowSuggestions(false);
+            }
+            if (navRef.current && !navRef.current.contains(event.target)) {
+                setIsMenuOpen(false);
             }
         };
 
@@ -54,7 +66,6 @@ const Navbar = () => {
         };
     }, []);
 
-    // Debounced live search suggestions
     useEffect(() => {
         if (!searchQuery.trim()) {
             dispatch(clearSearch());
@@ -81,8 +92,20 @@ const Navbar = () => {
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
-            navigate(`/?search=${searchQuery}`);
+            navigate(`/?search=${encodeURIComponent(searchQuery.trim())}`);
             setShowSuggestions(false);
+            setIsMenuOpen(false);
+        }
+    };
+
+    const handleGenreChange = (e) => {
+        const selectedId = e.target.value;
+        if (!selectedId) {
+            navigate('/?category=home');
+        } else {
+            const found = GENRES.find(g => g.id === selectedId);
+            const genreName = found ? found.name : '';
+            navigate(`/?genre=${encodeURIComponent(genreName)}&genreId=${selectedId}`);
         }
     };
 
@@ -92,25 +115,42 @@ const Navbar = () => {
         navigate(`/movie/${id}`);
         setShowSuggestions(false);
         setSearchQuery('');
+        setIsMenuOpen(false);
         dispatch(clearSearch());
     };
 
     return (
-        <nav className={`glass-nav ${isScrolled ? 'scrolled' : ''}`}>
+        <nav className={`glass-nav ${isScrolled ? 'scrolled' : ''}`} ref={navRef}>
             <div className="nav-brand">
                 <Link to="/" className="brand-link">
-                    
                     <span className="brand-text text-gradient">Filmyway</span>
                 </Link>
             </div>
 
             <div className="nav-center" ref={searchWrapperRef}>
-                <div className="nav-categories">
-                    <Link to="/?category=home" className={`nav-item ${category === 'home' ? 'active' : ''}`}>Home</Link>
-                    <Link to="/?category=trending" className={`nav-item ${category === 'trending' ? 'active' : ''}`}>Trending</Link>
-                    <Link to="/?category=movies" className={`nav-item ${category === 'movies' ? 'active' : ''}`}>Movies</Link>
-                    <Link to="/?category=tvshows" className={`nav-item ${category === 'tvshows' ? 'active' : ''}`}>TV Shows</Link>
+                <div className="nav-categories desktop-only">
+                    <Link to="/?category=home" className={`nav-item ${category === 'home' && !currentGenreId ? 'active' : ''}`}>Home</Link>
+                    <Link to="/?category=trending" className={`nav-item ${category === 'trending' && !currentGenreId ? 'active' : ''}`}>Trending</Link>
+                    <Link to="/?category=movies" className={`nav-item ${category === 'movies' && !currentGenreId ? 'active' : ''}`}>Movies</Link>
+                    <Link to="/?category=tvshows" className={`nav-item ${category === 'tvshows' && !currentGenreId ? 'active' : ''}`}>TV Shows</Link>
+                    
+                    <div className="genre-filter-pill">
+                        <Filter size={14} className="genre-icon" />
+                        <select
+                            className="genre-select"
+                            value={currentGenreId}
+                            onChange={handleGenreChange}
+                            aria-label="Filter by genre"
+                        >
+                            {GENRES.map((g) => (
+                                <option key={g.id || 'all'} value={g.id} className="genre-option">
+                                    {g.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
+
                 <form onSubmit={handleSearch} className="search-form">
                     <Search size={18} className="search-icon" />
                     <input
@@ -124,6 +164,7 @@ const Navbar = () => {
                         }}
                     />
                 </form>
+
                 {showSuggestions && searchResults.length > 0 && (
                     <div className="search-suggestions">
                         {searchResults.slice(0, 8).map((movie) => (
@@ -150,11 +191,11 @@ const Navbar = () => {
             <div className="nav-links">
                 {user ? (
                     <>
-                        <Link to="/favorites" className="nav-item">Favorites</Link>
+                        <Link to="/favorites" className="nav-item desktop-only">Favorites</Link>
                         {user.role === 'admin' && (
-                            <Link to="/admin" className="nav-item">Admin</Link>
+                            <Link to="/admin" className="nav-item desktop-only">Admin</Link>
                         )}
-                        <div className="user-menu">
+                        <div className="user-menu desktop-only">
                             <span className="welcome-text">Hi, {user.username}</span>
                             <button onClick={handleLogout} className="btn-icon" title="Logout">
                                 <LogOut size={20} />
@@ -162,12 +203,103 @@ const Navbar = () => {
                         </div>
                     </>
                 ) : (
-                    <div className="auth-links">
+                    <div className="auth-links desktop-only">
                         <Link to="/login" className="btn-glass">Sign In</Link>
                         <Link to="/signup" className="btn-primary">Sign Up</Link>
                     </div>
                 )}
+
+                <button
+                    className="mobile-menu-btn"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    aria-label="Toggle navigation menu"
+                >
+                    {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
             </div>
+
+            {/* Collapsible Mobile Menu */}
+            {isMenuOpen && (
+                <div className="mobile-menu-dropdown animate-fade">
+                    <div className="mobile-nav-categories">
+                        <Link
+                            to="/?category=home"
+                            className={`mobile-nav-item ${category === 'home' && !currentGenreId ? 'active' : ''}`}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            Home
+                        </Link>
+                        <Link
+                            to="/?category=trending"
+                            className={`mobile-nav-item ${category === 'trending' && !currentGenreId ? 'active' : ''}`}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            Trending
+                        </Link>
+                        <Link
+                            to="/?category=movies"
+                            className={`mobile-nav-item ${category === 'movies' && !currentGenreId ? 'active' : ''}`}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            Movies
+                        </Link>
+                        <Link
+                            to="/?category=tvshows"
+                            className={`mobile-nav-item ${category === 'tvshows' && !currentGenreId ? 'active' : ''}`}
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            TV Shows
+                        </Link>
+
+                        <div className="genre-filter-pill mobile-genre-pill">
+                            <Filter size={14} className="genre-icon" />
+                            <select
+                                className="genre-select"
+                                value={currentGenreId}
+                                onChange={(e) => {
+                                    handleGenreChange(e);
+                                    setIsMenuOpen(false);
+                                }}
+                                aria-label="Filter by genre"
+                            >
+                                {GENRES.map((g) => (
+                                    <option key={g.id || 'all'} value={g.id} className="genre-option">
+                                        {g.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {user ? (
+                            <div className="mobile-user-section">
+                                <Link to="/favorites" className="mobile-nav-item" onClick={() => setIsMenuOpen(false)}>
+                                    Favorites
+                                </Link>
+                                {user.role === 'admin' && (
+                                    <Link to="/admin" className="mobile-nav-item" onClick={() => setIsMenuOpen(false)}>
+                                        Admin Dashboard
+                                    </Link>
+                                )}
+                                <div className="mobile-user-info">
+                                    <span>Hi, {user.username}</span>
+                                    <button onClick={handleLogout} className="btn-icon" title="Logout">
+                                        <LogOut size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mobile-auth-links">
+                                <Link to="/login" className="btn-glass mobile-auth-btn" onClick={() => setIsMenuOpen(false)}>
+                                    Sign In
+                                </Link>
+                                <Link to="/signup" className="btn-primary mobile-auth-btn" onClick={() => setIsMenuOpen(false)}>
+                                    Sign Up
+                                </Link>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </nav>
     );
 };
