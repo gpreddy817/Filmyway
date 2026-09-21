@@ -143,7 +143,7 @@ const Home = () => {
     }
 
     return (
-        <div className="home-container animate-fade">
+        <div className={`home-container animate-fade ${(query || genreId) ? 'has-top-padding' : ''}`}>
             {query ? (
                 <section className="movie-section">
                     <h2 className="section-title">Search Results for "{query}"</h2>

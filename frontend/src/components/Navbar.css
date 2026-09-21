@@ -6,10 +6,10 @@
     left: 0;
     bottom: 0;
     width: 76px;
-    background: rgba(7, 11, 20, 0.85);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(180deg, rgba(7, 11, 20, 0.75) 0%, rgba(7, 11, 20, 0.3) 60%, rgba(7, 11, 20, 0) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none;
     z-index: 200;
     display: flex;
     flex-direction: column;
@@ -22,7 +22,7 @@
 
 .hotstar-rail.expanded {
     width: 220px;
-    background: rgba(7, 11, 20, 0.96);
+    background: rgba(7, 11, 20, 0.94);
     box-shadow: 10px 0 40px rgba(0, 0, 0, 0.8);
 }
 
@@ -133,7 +133,9 @@
     right: 0;
     height: 70px;
     z-index: 100;
-    background: linear-gradient(180deg, rgba(7, 11, 20, 0.9) 0%, rgba(7, 11, 20, 0) 100%);
+    background: linear-gradient(180deg, rgba(7, 11, 20, 0.75) 0%, rgba(7, 11, 20, 0.3) 60%, rgba(7, 11, 20, 0) 100%);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -142,10 +144,8 @@
 }
 
 .hotstar-header.scrolled {
-    background: rgba(7, 11, 20, 0.92);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6);
+    background: linear-gradient(180deg, rgba(7, 11, 20, 0.85) 0%, rgba(7, 11, 20, 0.4) 70%, rgba(7, 11, 20, 0) 100%);
+    backdrop-filter: blur(16px);
 }
 
 .mobile-brand {
