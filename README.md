@@ -57,7 +57,9 @@ Create a `.env` file in the `backend` folder:
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
+TMDB_SECRET=your_tmdb_bearer_token
 TMDB_API_KEY=your_tmdb_key
+OMDB_API_KEY=your_omdb_key
 ```
 Run the backend:
 ```bash
@@ -72,7 +74,6 @@ npm install
 Create a `.env` file in the `frontend` folder:
 ```env
 VITE_API_BASE_URL=http://localhost:5000/api
-VITE_TMDB_API_KEY=your_tmdb_key
 ```
 Run the frontend:
 ```bash

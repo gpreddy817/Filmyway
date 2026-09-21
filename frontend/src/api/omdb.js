@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-export const OMDB_API_KEY = import.meta.env.VITE_OMDB_API_KEY;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const omdbApi = axios.create({
-    baseURL: 'https://www.omdbapi.com/',
+    baseURL: `${API_BASE_URL}/omdb`,
 });
-

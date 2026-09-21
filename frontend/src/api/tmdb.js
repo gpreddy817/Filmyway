@@ -1,14 +1,9 @@
 import axios from 'axios';
 
-export const TMDB_SECRET = import.meta.env.VITE_TMDB_SECRET || 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3N2E0OTU5NGEzOGZiN2JmMGYwNjQyMzZlNDkxNjg4MyIsIm5iZiI6MTc4OTYyNDMxMS4zMjA5OTk5LCJzdWIiOiI2YWFiN2ZmN2ZhNjJlZDhjNzYxODBkYWUiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.mhXzuO8w0oDQKr5s86lGMVTmjTSvzwYdn_HH-8FVUnU';
-export const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || '77a49594a38fb7bf0f064236e4916883';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const tmdbApi = axios.create({
-    baseURL: 'https://api.themoviedb.org/3',
-    headers: {
-        Authorization: `Bearer ${TMDB_SECRET}`,
-        'Content-Type': 'application/json',
-    },
+    baseURL: `${API_BASE_URL}/tmdb`,
 });
 
 export const getTmdbPosterUrl = (path) => {

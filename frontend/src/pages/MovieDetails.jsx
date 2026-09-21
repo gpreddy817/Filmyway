@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { tmdbApi, getTmdbPosterUrl, getTmdbBackdropUrl } from '../api/tmdb';
-import { omdbApi, OMDB_API_KEY } from '../api/omdb';
+import { omdbApi } from '../api/omdb';
 import axios from 'axios';
 import { Heart, Play, X } from 'lucide-react';
 import './MovieDetails.css';
@@ -136,7 +136,7 @@ const MovieDetails = () => {
                         // Fallback to OMDB
                         try {
                             const omdbRes = await omdbApi.get('', {
-                                params: { apikey: OMDB_API_KEY, i: id, plot: 'full' }
+                                params: { i: id, plot: 'full' }
                             });
                             if (omdbRes.data && omdbRes.data.Response !== 'False') {
                                 loadedMovie = { ...omdbRes.data, isCustom: false, tmdbId: omdbRes.data.imdbID };

@@ -9,8 +9,8 @@ const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const movieRoutes = require('./src/routes/movieRoutes');
-
-
+const tmdbRoutes = require('./src/routes/tmdbRoutes');
+const omdbRoutes = require('./src/routes/omdbRoutes');
 
 connectDB();
 
@@ -26,6 +26,8 @@ const PORT = process.env.PORT || 5000;
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/movies', movieRoutes);
+app.use('/api/tmdb', tmdbRoutes);
+app.use('/api/omdb', omdbRoutes);
 
 app.get('/', (req, res) => {
     res.send('Filmyway API is running...');
