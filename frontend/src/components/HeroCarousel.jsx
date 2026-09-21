@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Info } from 'lucide-react';
+import { Play, Plus, Info } from 'lucide-react';
 import './HeroCarousel.css';
 
-// Strips Amazon CDN size constraints to get full-resolution poster
-// e.g. https://m.media-amazon.com/...._V1_SX300.jpg → ..._V1_.jpg
 const getHiRes = (url) => {
     if (!url || url === 'N/A') return null;
     return url
-        .replace(/_SX\d+/, '')     // remove width constraint
-        .replace(/_SY\d+/, '')     // remove height constraint
-        .replace(/_CR\d+,\d+,\d+,\d+_/, '') // remove crop
-        .replace(/_UX\d+_/, '')    // remove other size tokens
-        .replace(/\._V1_.*\.jpg/i, '._V1_.jpg'); // normalise suffix
+        .replace(/_SX\d+/, '')
+        .replace(/_SY\d+/, '')
+        .replace(/_CR\d+,\d+,\d+,\d+_/, '')
+        .replace(/_UX\d+_/, '')
+        .replace(/\._V1_.*\.jpg/i, '._V1_.jpg');
 };
 
 const HeroCarousel = ({ movies }) => {
@@ -31,8 +29,6 @@ const HeroCarousel = ({ movies }) => {
         return () => clearInterval(interval);
     }, [carouselMovies.length, isHovered]);
 
-
-    // ── Skeleton while movies are loading ─────────────────────
     if (carouselMovies.length === 0) {
         return (
             <div className="hero-carousel skeleton-carousel">
@@ -48,9 +44,8 @@ const HeroCarousel = ({ movies }) => {
 
     const movie = carouselMovies[currentIndex];
     const rawImg = movie.backdropUrl || movie.posterUrl || movie.Poster;
-    const bgImage = getHiRes(rawImg) || rawImg;  // full-res background
-    const thumbImg = movie.posterUrl || movie.Poster; // smaller is fine for thumbs
-    const title = movie.title || movie.name || movie.Title || 'Unknown';
+    const bgImage = getHiRes(rawImg) || rawImg;
+    const title = movie.title || movie.name || movie.Title || 'Untitled Movie';
     const year = movie.release_date
         ? new Date(movie.release_date).getFullYear()
         : (movie.Year || '');
@@ -58,6 +53,7 @@ const HeroCarousel = ({ movies }) => {
     const rating = movie.vote_average
         ? (typeof movie.vote_average === 'number' ? movie.vote_average.toFixed(1) : movie.vote_average)
         : movie.imdbRating || null;
+    const overview = movie.overview || movie.Plot || 'Stream latest blockbuster movies and web series exclusively on Filmyway.';
 
     return (
         <div
@@ -65,7 +61,7 @@ const HeroCarousel = ({ movies }) => {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* ── Full-bleed background image ──────────────── */}
+            {/* ── Background Backdrop Image ──────────────── */}
             <img
                 key={currentIndex}
                 src={bgImage}
@@ -74,22 +70,31 @@ const HeroCarousel = ({ movies }) => {
             />
             <div className="carousel-bg-overlay" />
 
-            {/* ── Left: movie info ──────────────────────────── */}
+            {/* ── Hero Info ──────────────────────────────── */}
             <div className="carousel-content" key={`info-${currentIndex}`}>
                 <div className="carousel-badge-row">
+                    <span className="badge-tag brand-badge">FILMYWAY ORIGINALS</span>
                     {year && <span className="carousel-year">{year}</span>}
                     {rating && <span className="carousel-rating">★ {rating}</span>}
+                    <span className="badge-tag hd-badge">4K ULTRA HD</span>
                 </div>
 
                 <h1 className="carousel-movie-title">{title}</h1>
+                <p className="carousel-overview">{overview}</p>
 
-                <Link to={`/movie/${id}`} className="carousel-know-more">
-                    <Info size={18} />
-                    Know More
-                </Link>
+                <div className="carousel-actions">
+                    <Link to={`/movie/${id}`} className="btn-primary hotstar-play-btn">
+                        <Play size={20} fill="white" />
+                        Watch Free
+                    </Link>
+                    <Link to={`/movie/${id}`} className="btn-glass hotstar-more-btn">
+                        <Info size={18} />
+                        Details
+                    </Link>
+                </div>
             </div>
 
-            {/* ── Thumbnail strip (right side) ─────────────── */}
+            {/* ── Side Thumbnail Strip ─────────────────────── */}
             <div className="carousel-thumbs">
                 {carouselMovies.map((m, i) => (
                     <button
@@ -102,9 +107,7 @@ const HeroCarousel = ({ movies }) => {
                 ))}
             </div>
 
-            {/* ── Arrow controls ────────────────────────────── */}
-
-            {/* ── Dot indicators ───────────────────────────── */}
+            {/* ── Carousel Indicators ───────────────────────── */}
             <div className="carousel-dots">
                 {carouselMovies.map((_, i) => (
                     <button

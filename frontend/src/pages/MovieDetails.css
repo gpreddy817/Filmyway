@@ -1,6 +1,14 @@
 .movie-details-container {
     min-height: 100vh;
+    padding-left: 76px;
     padding-bottom: 4rem;
+}
+
+@media (max-width: 768px) {
+    .movie-details-container {
+        padding-left: 0;
+        padding-top: 70px;
+    }
 }
 
 /* Loading state — starts from top of page below navbar */

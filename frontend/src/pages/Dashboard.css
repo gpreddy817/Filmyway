@@ -1,6 +1,13 @@
 .dashboard-container {
-    padding-top: 100px;
+    padding-top: 90px;
+    padding-left: 76px;
     min-height: calc(100vh - 80px);
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding-left: 0;
+    }
 }
 
 .dashboard-header {

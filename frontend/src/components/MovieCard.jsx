@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Star, PlayCircle } from 'lucide-react';
+import { Star, Play } from 'lucide-react';
 import './MovieCard.css';
 
 const MovieCard = ({ movie }) => {
@@ -14,15 +14,17 @@ const MovieCard = ({ movie }) => {
         : null;
 
     return (
-        <Link to={`/movie/${id}`} className="movie-card">
+        <Link to={`/movie/${id}`} className="movie-card hotstar-card">
             <div className="card-image-wrapper">
                 <img src={imageUrl} alt={title} className="card-image" loading="lazy" />
                 <div className="card-overlay">
-                    <PlayCircle size={48} className="play-icon" />
+                    <div className="hotstar-play-circle">
+                        <Play size={24} fill="white" className="play-icon" />
+                    </div>
                 </div>
                 {rating && (
                     <div className="card-rating">
-                        <Star size={13} className="star-icon" />
+                        <Star size={12} className="star-icon" />
                         <span>{rating}</span>
                     </div>
                 )}
@@ -31,11 +33,7 @@ const MovieCard = ({ movie }) => {
                 <h3 className="card-title" title={title}>{title}</h3>
                 <div className="card-meta">
                     {year && <span className="card-year">{year}</span>}
-                    {rating && (
-                        <span className="card-rating-text">
-                            <Star size={12} className="star-icon" /> {rating}
-                        </span>
-                    )}
+                    <span className="card-badge">FREE</span>
                 </div>
             </div>
         </Link>
