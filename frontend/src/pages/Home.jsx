@@ -37,33 +37,49 @@ const Home = () => {
         } else {
             dispatch(clearSearch());
             dispatch(clearGenre());
-            if (latest.length === 0 && (category === 'home' || category === 'movies')) dispatch(fetchLatest());
-            if (trending.length === 0 && (category === 'home' || category === 'trending')) dispatch(fetchTrending());
-            if (popular.length === 0 || page === 1 && (category === 'home' || category === 'movies')) dispatch(fetchPopular(1));
-            if (tvShows.length === 0 && (category === 'home' || category === 'tvshows')) dispatch(fetchTvShows(1));
+            // Fetch initial sections concurrently for faster first load
+            if (category === 'home') {
+                if (latest.length === 0) dispatch(fetchLatest());
+                if (trending.length === 0) dispatch(fetchTrending());
+                if (popular.length === 0) dispatch(fetchPopular(1));
+            } else if (category === 'movies') {
+                if (latest.length === 0) dispatch(fetchLatest());
+                if (popular.length === 0) dispatch(fetchPopular(1));
+            } else if (category === 'trending') {
+                if (trending.length === 0) dispatch(fetchTrending());
+            } else if (category === 'tvshows') {
+                if (tvShows.length === 0) dispatch(fetchTvShows(1));
+            }
         }
     }, [query, genreId, category, dispatch]);
 
-    // Load custom admin movies once for home sections
+    // Load custom admin movies concurrently for home page
     useEffect(() => {
+        let isMounted = true;
         const loadCustomMovies = async () => {
             try {
                 const res = await axios.get(`${API_URL}/movies`);
-                const sorted = (res.data || []).sort((a, b) => {
-                    const yearA = a.releaseDate ? new Date(a.releaseDate).getFullYear() : 0;
-                    const yearB = b.releaseDate ? new Date(b.releaseDate).getFullYear() : 0;
-                    return yearB - yearA;
-                });
-                setCustomMovies(sorted);
+                if (isMounted) {
+                    const sorted = (res.data || []).sort((a, b) => {
+                        const yearA = a.releaseDate ? new Date(a.releaseDate).getFullYear() : 0;
+                        const yearB = b.releaseDate ? new Date(b.releaseDate).getFullYear() : 0;
+                        return yearB - yearA;
+                    });
+                    setCustomMovies(sorted);
+                }
             } catch (error) {
                 console.error('Failed to load custom movies', error);
             }
         };
 
-        if (!query && !genreId && customMovies.length === 0) {
+        if (!query && !genreId && category === 'home' && customMovies.length === 0) {
             loadCustomMovies();
         }
-    }, [API_URL, query, genreId, customMovies.length]);
+
+        return () => {
+            isMounted = false;
+        };
+    }, [API_URL, query, genreId, category, customMovies.length]);
 
     // Delay "no results" message so skeleton shows briefly
     useEffect(() => {
@@ -250,7 +266,7 @@ const Home = () => {
 
                             {customMovies.length > 0 && (
                                 <section className="movie-section">
-                                    <h2 className="section-title">Filmyway Originals</h2>
+                                    <h2 className="section-title"><span className="font-pacifico">Filmyway</span> Originals</h2>
                                     <VirtualizedMovieGrid
                                         items={customMovies}
                                         estimatedItemHeight={320}

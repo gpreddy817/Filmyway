@@ -171,6 +171,10 @@ a:hover {
   background: var(--accent-color);
 }
 
+.font-pacifico {
+  font-family: 'Pacifico', cursive;
+}
+
 /* Toast notifications */
 .toast {
   position: fixed;
